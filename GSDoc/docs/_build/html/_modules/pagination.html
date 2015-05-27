@@ -1,0 +1,273 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pagination &mdash; Sphinx Document Creation  documentation</title>
+    
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Sphinx Document Creation  documentation" href="../index.html" />
+    <link rel="up" title="Module code" href="index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Sphinx Document Creation  documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pagination</h1><div class="highlight"><pre>
+<span class="c"># -*- coding: utf-8 -*-</span>
+<span class="c"># The software in this module is subject to the license terms in the ZeOmega</span>
+<span class="c"># EULA included herewith. (C) 2011-2015 ZeOmega, Inc. All Rights Reserved.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Database backend pagination support.</span>
+<span class="sd">To support pagination for use by web services code, it&#39;s important for the</span>
+<span class="sd">database backend to support paginated result sets.  Sorting of records needs</span>
+<span class="sd">to be handled against entire result sets, not just within individual pages.</span>
+<span class="sd">The same goes for select criteria.</span>
+<span class="sd">To avoid requiring pagination code in each and every query, this module</span>
+<span class="sd">provides a generic function for producing a modified query object with a</span>
+<span class="sd">paginated WHERE clause added.</span>
+<span class="sd">The idea here is to show how we can wrap the given query around the column(s) on</span>
+<span class="sd">which we are interested to paginate and generate the paginated query object. The</span>
+<span class="sd">feature is supported with the dynamic window size selection by the app user.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="n">func</span><span class="p">,</span> <span class="n">between</span>
+
+
+<div class="viewcode-block" id="paginate"><a class="viewcode-back" href="../pagination.html#pagination.paginate">[docs]</a><span class="k">def</span> <span class="nf">paginate</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">page_num</span><span class="p">,</span> <span class="n">page_size</span><span class="p">,</span> <span class="n">order_by_column</span><span class="p">,</span>
+             <span class="n">partition_by_column</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">order_by</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">session</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modify the `query` object with paginated _row_number and order by clause on</span>
+<span class="sd">    the specified `column`. The window size is created dynamically based on the</span>
+<span class="sd">    application user input. This function adds a pagination wrapper around the</span>
+<span class="sd">    query object on the specified column(s).</span>
+<span class="sd">    Args:</span>
+<span class="sd">      query(object): SQLAlchemy query object or Subquery object.</span>
+<span class="sd">      page_num(int): Page number</span>
+<span class="sd">      page_size(int): Number of record of per page</span>
+<span class="sd">      order_by_column(object or list): SQLAlchemy column(s) object(s).</span>
+<span class="sd">      partition_by_column(object or list): SQLAlchemy column(s) object(s)</span>
+<span class="sd">                        There is a major assumption that the value in this</span>
+<span class="sd">                        column should be unique per record (not repeating)</span>
+<span class="sd">                        in the initial input query.</span>
+<span class="sd">      order_by(str): Order by clause, &#39;asc&#39; for ascending or &#39;desc&#39; for</span>
+<span class="sd">                       descending. Default is &#39;asc&#39;.</span>
+<span class="sd">      session(object): database session connection object.</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        An output query object wrapped with paginated where clause based</span>
+<span class="sd">        on row_number (_row_number), sorted by and partitioned by the respective</span>
+<span class="sd">        column(s).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="s">&#39;session&#39;</span><span class="p">):</span>
+        <span class="c"># subquery object is passed.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">session</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s">&quot;query object has no attribute &#39;session&#39;&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c"># query object is passed.</span>
+        <span class="n">session</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">session</span>
+
+    <span class="k">if</span> <span class="n">partition_by_column</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">order_by</span><span class="p">:</span>
+            <span class="n">partition_by_column</span> <span class="o">=</span> <span class="n">_get_order_by_columns</span><span class="p">(</span><span class="n">partition_by_column</span><span class="p">,</span>
+                                                        <span class="n">order_by</span><span class="p">)</span>
+
+        <span class="n">paginate_column</span> <span class="o">=</span> <span class="n">func</span><span class="o">.</span><span class="n">row_number</span><span class="p">()</span><span class="o">.</span><span class="n">over</span><span class="p">(</span>
+            <span class="n">partition_by</span><span class="o">=</span><span class="n">partition_by_column</span><span class="p">,</span>
+            <span class="n">order_by</span><span class="o">=</span><span class="n">order_by_column</span><span class="p">)</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="s">&#39;_row_number&#39;</span><span class="p">)</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">order_by</span><span class="p">:</span>
+            <span class="n">order_by_column</span> <span class="o">=</span> <span class="n">_get_order_by_columns</span><span class="p">(</span><span class="n">order_by_column</span><span class="p">,</span>
+                                                    <span class="n">order_by</span><span class="p">)</span>
+
+        <span class="n">paginate_column</span> <span class="o">=</span> <span class="n">func</span><span class="o">.</span><span class="n">row_number</span><span class="p">()</span><span class="o">.</span><span class="n">over</span><span class="p">(</span>
+            <span class="n">order_by</span><span class="o">=</span><span class="n">order_by_column</span><span class="p">)</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="s">&#39;_row_number&#39;</span><span class="p">)</span>
+
+    <span class="n">pagination_subquery</span> <span class="o">=</span> <span class="n">_get_paginated_subquery</span><span class="p">(</span><span class="n">session</span><span class="p">,</span>
+                                                  <span class="n">query</span><span class="p">,</span>
+                                                  <span class="n">paginate_column</span><span class="p">)</span>
+
+    <span class="n">start_page</span> <span class="o">=</span> <span class="n">_get_window_top</span><span class="p">(</span><span class="n">page_num</span><span class="p">,</span> <span class="n">page_size</span><span class="p">)</span>
+
+    <span class="n">end_page</span> <span class="o">=</span> <span class="n">_get_window_bottom</span><span class="p">(</span><span class="n">page_num</span><span class="p">,</span> <span class="n">page_size</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">_paged_query_object</span><span class="p">(</span><span class="n">session</span><span class="p">,</span>
+                               <span class="n">pagination_subquery</span><span class="p">,</span>
+                               <span class="n">start_page</span><span class="p">,</span>
+                               <span class="n">end_page</span><span class="p">)</span>
+
+</div>
+<span class="k">def</span> <span class="nf">_paged_query_object</span><span class="p">(</span><span class="n">session</span><span class="p">,</span> <span class="n">pagination_subquery</span><span class="p">,</span> <span class="n">start_page</span><span class="p">,</span> <span class="n">end_page</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generate the paginated query object based on the start and end row number.</span>
+<span class="sd">    Args:</span>
+<span class="sd">        session: connection object to database</span>
+<span class="sd">        paginated_subquery: pagination subquery over which the output</span>
+<span class="sd">                            query needs to be formed</span>
+<span class="sd">        start_page(int): starting row number</span>
+<span class="sd">        end_page(int): ending row number</span>
+<span class="sd">    Returns:</span>
+<span class="sd">       Return the paginated query object</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">paged_query</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">pagination_subquery</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">between</span><span class="p">(</span>
+        <span class="n">pagination_subquery</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">_row_number</span><span class="p">,</span> <span class="n">start_page</span><span class="p">,</span> <span class="n">end_page</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">paged_query</span>
+
+
+<span class="k">def</span> <span class="nf">_get_order_by_columns</span><span class="p">(</span><span class="n">column_details</span><span class="p">,</span> <span class="n">order_by</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Attach the  order_by clause to the column object.</span>
+<span class="sd">    Args:</span>
+<span class="sd">        column_details(column or list): column object(s).</span>
+<span class="sd">        order_by(str): order_by clause. Default is ascending.</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        Column object(s) with order_by clause attached.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">column_details</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">_attach_clause</span><span class="p">(</span><span class="n">column_details</span><span class="p">,</span> <span class="n">order_by</span><span class="p">)</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_query_with_column</span><span class="p">(</span><span class="n">column_details</span><span class="p">,</span> <span class="n">order_by</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_attach_clause</span><span class="p">(</span><span class="n">list_of_columns</span><span class="p">,</span> <span class="n">order_by</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Attach the order_by clause to the column and return the list of objects.</span>
+<span class="sd">    The list containing the objects is used in the order_by clause of row_number</span>
+<span class="sd">    function.</span>
+<span class="sd">    Args:</span>
+<span class="sd">        list_of_columns(list): list containing column names</span>
+<span class="sd">        order_by(str): order by clause</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        List containing the objects formed by attaching the order_by clause</span>
+<span class="sd">        with the column object.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">attached_column</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">list_of_columns</span><span class="p">:</span>
+        <span class="n">attached_column</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_query_with_column</span><span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="n">order_by</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">attached_column</span>
+
+
+<span class="k">def</span> <span class="nf">_query_with_column</span><span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="n">order_by</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Attach the order_by clause to the column object.</span>
+<span class="sd">    Raise Exception if column doesnot have the order_by clause attribute.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">query_column</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="n">order_by</span><span class="p">)()</span>
+        <span class="k">return</span> <span class="n">query_column</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s">&quot;Column object has no order_by clause attribute `{0}`&quot;</span>
+                             <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">order_by</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">_get_paginated_subquery</span><span class="p">(</span><span class="n">session</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">paginate_column</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Subquery with _row_number column. This query attaches the _row_number</span>
+<span class="sd">    function to the original query object.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="s">&#39;session&#39;</span><span class="p">):</span>
+        <span class="c"># query object is passed.</span>
+        <span class="k">return</span> <span class="n">query</span><span class="o">.</span><span class="n">add_column</span><span class="p">(</span><span class="n">paginate_column</span><span class="p">)</span><span class="o">.</span><span class="n">subquery</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c"># subquery object is passed.</span>
+        <span class="k">return</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">paginate_column</span><span class="p">)</span><span class="o">.</span><span class="n">subquery</span><span class="p">()</span>
+
+
+<span class="k">def</span> <span class="nf">_get_window_top</span><span class="p">(</span><span class="n">page_num</span><span class="p">,</span> <span class="n">page_size</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the start page number</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">return</span> <span class="p">(</span><span class="n">page_num</span> <span class="o">*</span> <span class="n">page_size</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="n">page_size</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_get_window_bottom</span><span class="p">(</span><span class="n">page_num</span><span class="p">,</span> <span class="n">page_size</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the end page number</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">return</span> <span class="n">page_num</span> <span class="o">*</span> <span class="n">page_size</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Sphinx Document Creation  documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, Ameet Mamadapur.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>

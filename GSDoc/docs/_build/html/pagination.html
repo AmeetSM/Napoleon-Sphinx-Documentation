@@ -1,0 +1,159 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pagination module &mdash; Sphinx Document Creation  documentation</title>
+    
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Sphinx Document Creation  documentation" href="index.html" />
+    <link rel="prev" title="google module" href="google.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="google.html" title="google module"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Sphinx Document Creation  documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-pagination">
+<span id="pagination-module"></span><h1>pagination module<a class="headerlink" href="#module-pagination" title="Permalink to this headline">¶</a></h1>
+<p>Database backend pagination support.
+To support pagination for use by web services code, it&#8217;s important for the
+database backend to support paginated result sets.  Sorting of records needs
+to be handled against entire result sets, not just within individual pages.
+The same goes for select criteria.
+To avoid requiring pagination code in each and every query, this module
+provides a generic function for producing a modified query object with a
+paginated WHERE clause added.
+The idea here is to show how we can wrap the given query around the column(s) on
+which we are interested to paginate and generate the paginated query object. The
+feature is supported with the dynamic window size selection by the app user.</p>
+<dl class="function">
+<dt id="pagination.paginate">
+<code class="descclassname">pagination.</code><code class="descname">paginate</code><span class="sig-paren">(</span><em>query</em>, <em>page_num</em>, <em>page_size</em>, <em>order_by_column</em>, <em>partition_by_column=None</em>, <em>order_by=None</em>, <em>session=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pagination.html#paginate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pagination.paginate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Modify the <cite>query</cite> object with paginated _row_number and order by clause on
+the specified <cite>column</cite>. The window size is created dynamically based on the
+application user input. This function adds a pagination wrapper around the
+query object on the specified column(s).
+:param query: SQLAlchemy query object or Subquery object.
+:type query: object
+:param page_num: Page number
+:type page_num: int
+:param page_size: Number of record of per page
+:type page_size: int
+:param order_by_column: SQLAlchemy column(s) object(s).
+:type order_by_column: object or list
+:param partition_by_column: SQLAlchemy column(s) object(s)</p>
+<blockquote>
+<div>There is a major assumption that the value in this
+column should be unique per record (not repeating)
+in the initial input query.</div></blockquote>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>order_by</strong> (<em>str</em>) &#8211; Order by clause, &#8216;asc&#8217; for ascending or &#8216;desc&#8217; for
+descending. Default is &#8216;asc&#8217;.</li>
+<li><strong>session</strong> (<em>object</em>) &#8211; database session connection object.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">An output query object wrapped with paginated where clause based
+on row_number (_row_number), sorted by and partitioned by the respective
+column(s).</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="google.html"
+                        title="previous chapter">google module</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/pagination.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="google.html" title="google module"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Sphinx Document Creation  documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, Ameet Mamadapur.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>
