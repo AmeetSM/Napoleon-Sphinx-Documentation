@@ -73,6 +73,6 @@ http://sphinx-doc.org/config.html#confval-language.
     
     4 directories, 4 files
 
-one-piece : (~/workspace/DocIt/GSDoc) >> make html
-one-piece : (~/workspace/DocIt/GSDoc) >> python -m SimpleHttpServer
+    one-piece : (~/workspace/DocIt/GSDoc) >> make html
+    one-piece : (~/workspace/DocIt/GSDoc) >> python -m SimpleHttpServer
 
