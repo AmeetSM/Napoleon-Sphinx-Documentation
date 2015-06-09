@@ -76,3 +76,7 @@ http://sphinx-doc.org/config.html#confval-language.
     one-piece : (~/workspace/DocIt/GSDoc) >> make html
     one-piece : (~/workspace/DocIt/GSDoc) >> python -m SimpleHttpServer
 
+
+Note -
+------
+Please clone this repository and run `` python -m SimpleHttpServer `` from ``Napoleon-Sphinx-Documentation/tree/master/GSDoc/docs`` path and see the sphinx html doc running on your localhost:8000.
