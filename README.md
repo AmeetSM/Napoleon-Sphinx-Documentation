@@ -79,4 +79,4 @@ http://sphinx-doc.org/config.html#confval-language.
 
 Note -
 ------
-Please clone this repository and run `` python -m SimpleHttpServer `` from ``Napoleon-Sphinx-Documentation/tree/master/GSDoc/docs`` path and see the sphinx html doc running on your localhost:8000.
+Please clone this repository and run `` python -m SimpleHttpServer `` from ``Napoleon-Sphinx-Documentation/tree/master/GSDoc/docs`` path and see the sphinx html doc running on your ``localhost:8000``.
